@@ -432,7 +432,7 @@ class GameManager {
                 audio2.setVolume(0.5);
                 audio2.play()
             });
-        }, 1800);
+        }, 2200);
 
 
 

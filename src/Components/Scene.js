@@ -29,7 +29,7 @@ class Scene {
 
         let roadGeometry = new THREE.PlaneBufferGeometry(roadWidth, 700);
 
-        const mapHeight = new THREE.TextureLoader().load( "road-texture.jpg" );
+        // const mapHeight = new THREE.TextureLoader().load( "road-texture.jpg" );
 
         let roadMaterial = new THREE.MeshPhongMaterial({
             // color:"0xcccccc",
@@ -303,17 +303,17 @@ function Particle (){
     this.mesh = new THREE.Mesh(geom,mat);
 }
 
-Particle.prototype.explode = function(pos, color, scale){
+Particle.prototype.explode = function(pos, color, scale, radius = 15){
     var _this = this;
     var _p = this.mesh.parent;
     this.mesh.material.color = new THREE.Color(color);
     this.mesh.material.needsUpdate = true;
     this.mesh.scale.set(scale, scale, scale);
-    var targetX = pos.x + (-1 + Math.random()*2)*15;
-    var targetY = pos.y + (-1 + Math.random()*2)*15;
-    var targetZ = pos.z + (-1 + Math.random()*2)*15;
+    var targetX = pos.x + (-1 + Math.random()*2)*radius;
+    var targetY = pos.y + (-1 + Math.random()*2)*radius;
+    var targetZ = pos.z + (-1 + Math.random()*2)*radius;
     // var speed = .6+Math.random()*.2;
-    gsap.to(this.mesh.rotation, {x:Math.random()*12, y:Math.random()*12});
+    gsap.to(this.mesh.rotation, {x:Math.random()*12, y:Math.random()*12, z:Math.random()*12});
     gsap.to(this.mesh.scale, {x:.05, y:.05, z:.05});
     gsap.to(this.mesh.position, {x:targetX, y:targetY, z:targetZ, delay:Math.random() *.1, ease:"power1.out", onComplete:function(){
             if(_p) _p.remove(_this.mesh);
@@ -349,7 +349,11 @@ class ParticlesHolder {
         }
     }
 
-    generateSmoke(pos, density){
+    generateTiresSmoke(carPos, density){
+        var rearLeftWheel = {x: carPos.x + 1.5, y: carPos.y - 1, z: carPos.z + 3};
+        var rearRightWheel = {x: carPos.x - 1.5, y: carPos.y - 1, z: carPos.z + 3};
+        this.generateSingleParticlesSource(density, rearLeftWheel, "grey", 0.08, 5);
+        this.generateSingleParticlesSource(density, rearRightWheel,"grey" , 0.08, 5);
 
     }
 
@@ -359,7 +363,7 @@ class ParticlesHolder {
             (value, index) => start + index * step
         );
 
-    generateSingleParticlesSource(nPArticles, pos, color, scale) {
+    generateSingleParticlesSource(nPArticles, pos, color, scale, radius = 15) {
         for (var i = 0; i < nPArticles; i++) {
             var particle;
             if (particlesPool.length) {
@@ -369,11 +373,11 @@ class ParticlesHolder {
             }
             this.mesh.add(particle.mesh);
             particle.mesh.visible = true;
-            var _this = this;
+            // var _this = this;
             particle.mesh.position.y = pos.y;
             particle.mesh.position.x = pos.x;
             particle.mesh.position.z = pos.z;
-            particle.explode(pos, color, scale);
+            particle.explode(pos, color, scale, radius);
         }
     }
 }
@@ -383,8 +387,8 @@ class GameManager {
         this.playing = false;
         this.car = car;
         this.scene = scene;
-        this.maxObstacleSpeed = 1.6;
-        this.obstacleSpeed = 0.65;
+        this.maxObstacleSpeed = 1.4;
+        this.obstacleSpeed = 0.55;
         // this.obstacleSpeed = 0.15;
         this.obstacles = [];
         this.lane = 0;
@@ -392,71 +396,79 @@ class GameManager {
         this.laneWidth = 6.1;
         this.probability = 0.02;
         this.maxProbability = 0.08;
-        this.obstacleDistance = 70;
-        this.maxObstacleDistance = 120;
+        this.obstacleDistance = 120;
+        this.maxObstacleDistance = 180;
         this.lastBorder = 20;
         this.acceleration = 1;
         this.streak = 0;
         this.maxStreak = 0;
 
-        this.up = 1;
+        this.maxVol = 0;
+        this.minVol = 0;
+
+        this.lastOrb = 0;
+        this.audioStart = 0;
+        this.musicDelay = 2300;
 
 
-        // this.audio = new Audio();
-        // this.audio.src = "coin.mp3";
-        // this.audio.controls = false;
-        // this.audio.loop = false;
-        // this.audio.autoplay = false;
+        this.stream = "https://cdn.rawgit.com/ellenprobst/web-audio-api-with-Threejs/57582104/lib/TheWarOnDrugs.m4a";
+        // this.stream = "coin.mp3";
 
-        var stream = "https://cdn.rawgit.com/ellenprobst/web-audio-api-with-Threejs/57582104/lib/TheWarOnDrugs.m4a";
-        var fftSize = 2048;
+        var fftSize = 4096;
         // var listener = new THREE.AudioListener();
-        var audio = new THREE.Audio(new THREE.AudioListener());
-        audio.crossOrigin = "anonymous";
+        this.audio = new THREE.Audio(new THREE.AudioListener());
+        this.audio.crossOrigin = "anonymous";
 
         var audioLoader = new THREE.AudioLoader();
-        audioLoader.load(stream, function(buffer) {
-            audio.setBuffer(buffer);
-            audio.setLoop(true);
-            audio.setVolume(0.001);
-            audio.play();
+        var _this = this;
+        audioLoader.load(this.stream, function (buffer) {
+            _this.audio.setBuffer(buffer);
+            _this.audio.setLoop(true);
+            _this.audio.setVolume(0.01);
+            _this.audio.play();
+            _this.audioStart = performance.now();
         });
 
-        var audio2 = new THREE.Audio(new THREE.AudioListener());
+        this.audio2 = new THREE.Audio(new THREE.AudioListener());
 
-        var audioLoader2 = new THREE.AudioLoader();
+
+        this.audioLoader2 = new THREE.AudioLoader();
+
         setTimeout(() => {
-            audioLoader2.load(stream, function(buffer) {
-                audio2.setBuffer(buffer);
-                audio2.setLoop(true);
-                audio2.setVolume(0.5);
-                audio2.play()
+            _this.audioLoader2.load(_this.stream, function (buffer) {
+                _this.audio2.setBuffer(buffer);
+                _this.audio2.setLoop(true);
+                _this.audio2.setVolume(0.5);
+                // console.log(performance.now() - _this.audioStart);
+                // _this.audio2.play()
+                _this.playUserAudio();
             });
-        }, 2200);
-
+        }, 1900);
 
 
         this.audioData = [];
-        this.analyser = new THREE.AudioAnalyser(audio, fftSize);
+        this.analyser = new THREE.AudioAnalyser(this.audio, fftSize);
 
-        this.analyser.analyser.maxDecibels = -3;
+        this.analyser.analyser.maxDecibels = -1;
         this.analyser.analyser.minDecibels = -100;
         this.dataArray = this.analyser.data;
         this.getAudioData(this.dataArray);
 
-        // document.body.appendChild(audio);
-        //
-        // this.audioContext = new (window.AudioContext)();
-        // this.source = this.audioContext.createMediaElementSource(this.audio);
-        // this.analyser = this.audioContext.createAnalyser();
-        // this.source.connect(this.analyser);
-        // this.analyser.connect(this.audioContext.destination);
     }
 
+    playUserAudio() {
+        // console.log(performance.now() - this.audioStart);
+        if (performance.now() - this.audioStart >= this.musicDelay && !this.audio2.isPlaying && this.audio) {
+            this.audio2.play();
+            // console.log(performance.now()," start playing");
+        } else {
+            setTimeout(() => this.playUserAudio(), 100);
+        }
+    }
 
     getAudioData(data) {
         // Split array into 3
-        var frequencyArray = this.splitFrenquencyArray(data, 3);
+        var frequencyArray = this.splitFrenquencyArray(data, 4);
 
         // Make average of frenquency array entries
         for (var i = 0; i < frequencyArray.length; i++) {
@@ -471,7 +483,7 @@ class GameManager {
     }
 
     splitFrenquencyArray(arr, n) {
-        var tab = Object.keys(arr).map(function(key) {
+        var tab = Object.keys(arr).map(function (key) {
             return arr[key];
         });
         var len = tab.length,
@@ -488,12 +500,7 @@ class GameManager {
     }
 
     start() {
-        // this.audio = new Audio();
-        // this.audio.src = "coin.MP3";
-        // this.audio.controls = true;
-        // this.audio.loop = false;
-        // this.audio.autoplay = false;
-        // document.body.appendChild(this.audio);
+
         setInterval(() => {
             this.update();
             // this.render();
@@ -502,15 +509,14 @@ class GameManager {
     }
 
 
-
     checkCollision(obj1, obj2) {
-        if(!obj2.isBarrier) {
+        if (!obj2.isBarrier) {
             let x1 = obj1.position.x;
             let z1 = obj1.position.z;
             let x2 = obj2.position.x;
             let z2 = obj2.position.z;
             let y1 = this.car.chassis.position.y;
-            if (this.isJumping && !obj2.isHigh){
+            if (this.isJumping && !obj2.isHigh) {
                 y1 = 0.5;
             }
             let y2 = obj2.position.y;
@@ -523,22 +529,19 @@ class GameManager {
             //     this.audio.play();
             // }
             return hit;
-        }
-        else{
+        } else {
             let z1 = obj1.position.z;
             let z2 = obj2.position.z;
 
-            return Math.abs(z1-z2) < 8.5 && this.car.chassis.position.y < 3;
+            return Math.abs(z1 - z2) < 8.5 && this.car.chassis.position.y < 3;
             // let distance = z2 - z1;
             // return distance < 2;
         }
     }
 
     update() {
+
         this.analyser.getFrequencyData();
-        // console.log(this.car);
-        // this.car.mesh.position.z -= this.speed;
-        // this.scene.camera.position.z-=this.speed;
 
         if (this.obstacleSpeed < this.maxObstacleSpeed) {
             this.obstacleSpeed += 0.05;
@@ -548,7 +551,7 @@ class GameManager {
             this.probability += 0.00005;
         }
 
-        // console.log("Streak",this.streak, "Max Streak:", this.maxStreak);
+        console.log("Streak", this.streak, "Max Streak:", this.maxStreak);
 
         this.handleObstacles();
 
@@ -557,15 +560,15 @@ class GameManager {
                 e.preventDefault();
                 this.turning = true;
                 if (e.key === "ArrowLeft") {
-                    if (this.lane === -2){
-                        this.turning=false
+                    if (this.lane === -2) {
+                        this.turning = false
                         return;
                     }
                     this.lane = this.lane - 1;
                     console.log("go left", this.lane);
                 } else if (e.key === "ArrowRight") {
                     if (this.lane === 2) {
-                        this.turning=false
+                        this.turning = false
                         return;
                     }
                     this.lane = this.lane + 1;
@@ -574,11 +577,11 @@ class GameManager {
 
                 this.car.mesh.position.x = this.lane * this.laneWidth;
 
-                setTimeout(()=>this.turning=false, 100)
+                setTimeout(() => this.turning = false, 100)
             }
         };
 
-        const handleMouseMove = event => {
+        const handleMoveEvent = event => {
             const maxMoveX = 13.2;
             const minMoveX = -maxMoveX;
 
@@ -597,7 +600,7 @@ class GameManager {
             this.car.chassis.rotation.z = (xPos - this.car.mesh.position.x) * -0.4;
             this.car.mesh.rotation.y = Math.min(Math.max(xPos - this.car.mesh.position.x, -0.15), 0.1) * -0.8;
 
-            if (!this.isJumping){
+            if (!this.isJumping) {
                 this.car.mesh.rotation.x = Math.max((this.forward - this.car.mesh.position.z) * -0.5, -0.3);
             }
             // this.car.chassis.position.y = map(forward, -6, 9, 9, -1);
@@ -608,14 +611,27 @@ class GameManager {
             this.car.mesh.position.z = this.forward;
             // this.car.mesh.rotation.z = -this.lane * Math.PI/50;
 
-            this.scene.camera.rotation.x =  this.map(event.clientY + 50, 0, window.innerHeight, -0.57, -0.63);
+            this.scene.camera.rotation.x = this.map(event.clientY + 50, 0, window.innerHeight, -0.57, -0.63);
             // this.scene.camera.position.z =  map(this.forward, -20, 12, 19, 21);
+        }
 
+        const handleMouseMove = event => {
+            handleMoveEvent(event)
+        };
 
+        const handleTouchMove = event => {
+            event.preventDefault();
+            handleMoveEvent(event.touches[0])
+        };
+
+        const handleTouchClick = event => {
+            event.preventDefault();
+            if (event.touches.length > 1) {
+                handleMouseClick(event);
+            }
         };
 
         const handleMouseClick = event => {
-
             if (!this.isJumping) {
                 // console.log("jumping");
                 this.scene.cameraJump();
@@ -630,6 +646,8 @@ class GameManager {
             window.addEventListener("keydown", handleKeyDown);
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mousedown', handleMouseClick);
+            window.addEventListener('touchstart', handleTouchClick);
+            window.addEventListener('touchmove', handleTouchMove);
         }
 
         this.handleJump();
@@ -641,11 +659,11 @@ class GameManager {
     }
 
     map = (value, inMin, inMax, outMin, outMax) => {
-        return ((value - inMin) / (inMax - inMin)) * (outMax - outMin)  + outMin ;
+        return ((value - inMin) / (inMax - inMin)) * (outMax - outMin) + outMin;
     }
 
     handleJump() {
-        const maxJump = 7;
+        // const maxJump = 7;
         const minJump = 0;
 
         // let momentum = Math.max(0, this.acceleration);
@@ -660,14 +678,15 @@ class GameManager {
             // calculate the current height using the equations of motion
             let height = v0 * elapsed + 0.5 * g * (elapsed ** 2);
 
-            this.car.chassis.rotation.x = Math.PI/2 - Math.atan(v0 * elapsed / this.car.chassis.position.y);
+            this.car.chassis.rotation.x = Math.PI / 2 - Math.atan(v0 * elapsed / this.car.chassis.position.y);
 
             // check if the car has reached the minimum height
             if (height <= minJump) {
                 // reset the car's position to its original position
                 this.car.chassis.position.y = minJump;
                 this.isJumping = false;
-                this.scene.particlesHolder.spawnParticles(this.car.mesh.position.clone(), 70, "grey", 0.1, false);
+                // this.scene.particlesHolder.spawnParticles(this.car.mesh.position.clone(), 70, "grey", 0.1, false);
+                this.scene.particlesHolder.generateTiresSmoke(this.car.mesh.position.clone(), 200);
                 // this.scene.particlesHolder.spawnParticles(this.car.mesh.position.clone(), 20, "grey", 0.2, false);
 
                 return;
@@ -695,16 +714,15 @@ class GameManager {
 
                 if (obstacle.isBarrier) {
                     this.scene.hitCamera();
-                    console.log("Hit a barrier");
+                    // console.log("Hit a barrier");
                     this.streak = 0;
-                }
-                else{
+                } else {
                     this.streak += 1;
-                    if (this.streak > this.maxStreak){
+                    if (this.streak > this.maxStreak) {
                         this.maxStreak = this.streak;
                     }
                 }
-
+                obstacle.position.y = Math.sin(performance.now());
                 this.scene.remove(obstacle);
                 obstacle.hit = true;
                 return;
@@ -715,8 +733,8 @@ class GameManager {
 
         this.obstacles.filter(obstacle => obstacle.position.z >= this.lastBorder && !obstacle.hit).forEach(obstacle => {
             this.scene.remove(obstacle)
-            if (!obstacle.isBarrier) {
-                console.log("Not a barrier");
+            if (!obstacle.isBarrier && !obstacle.isBonus) {
+                // console.log("Hit!");
                 this.streak = 0;
             }
         });
@@ -729,16 +747,18 @@ class GameManager {
 
     generateObstacles() {
         const minOrbTimeDifferenceInMS = 200;
+        const maxOrbTimeDifferenceInMS = 1000;
+        const bonusHeight = 8;
+        const bonusMovement = 1;
         const minBarrierTimeDifferenceInMS = 800;
 
         if (Math.random() < this.probability && !this.recentBarrier) {
             let obstacle;
             let lane = Math.floor(Math.random() * 5) - 2;
 
-            if (Math.random() < 0.1 && !this.recentBarrier)
-            {
+            if (Math.random() < 0.1 && !this.recentBarrier) {
                 this.recentBarrier = true;
-                setTimeout(()=> this.recentBarrier = false, minBarrierTimeDifferenceInMS)
+                setTimeout(() => this.recentBarrier = false, minBarrierTimeDifferenceInMS)
 
                 obstacle = new THREE.Mesh(
                     new THREE.BoxGeometry(roadWidth, 1.5, 4.5),
@@ -747,91 +767,104 @@ class GameManager {
                 obstacle.isBarrier = true;
                 obstacle.color = "red";
                 obstacle.position.y = 2.5
-            }
+                console.log("barrier:", obstacle);
 
-            else if (Math.random() < 0.1 )
-            {
+            } else if (Math.random() < 0.1) { //Dispatch bonus orb
                 this.recentBarrier = true;
-                setTimeout(()=> this.recentBarrier = false, minBarrierTimeDifferenceInMS)
+                setTimeout(() => this.recentBarrier = false, minBarrierTimeDifferenceInMS)
 
                 obstacle = new THREE.Mesh(
-                    new THREE.SphereGeometry(1.5, 10, 10),
+                    // new THREE.SphereGeometry(1.5, 10, 10),
+                    new THREE.TorusKnotGeometry( 1, 1.7, 30, 6, 11, 5 ),
                     new THREE.MeshPhongMaterial(
                         {
                             color: 0xffd700, // golden color
                             shininess: 100, // high shininess for a shiny effect
                             transparent: true,
-                            opacity: 0.9
+                            opacity: 0.9,
+                            emissive: 0xffd700,
+                            emissiveIntensity: 1
                         })
                 );
                 obstacle.color = "yellow";
                 obstacle.isHigh = true;
+                obstacle.isBonus = true;
                 obstacle.position.x = lane * this.laneWidth;
-                obstacle.position.y = 8;
+                obstacle.position.y = bonusHeight;
+                var tl = gsap.timeline({yoyo: true});
+                tl.to(obstacle.position, {y: bonusHeight + bonusMovement});
+
+                //
+                // else{
+                //     obstacle = new THREE.Mesh(
+                //         new THREE.SphereGeometry(1.5, 10, 10),
+                //         new THREE.MeshPhongMaterial({color: 0x00ff00})
+                //     );
+                //     obstacle.isBarrier = false;
+                //     obstacle.color = "green";
+                //     obstacle.position.x = lane * this.laneWidth;
+                // }
             }
-            //
-            // else{
-            //     obstacle = new THREE.Mesh(
-            //         new THREE.SphereGeometry(1.5, 10, 10),
-            //         new THREE.MeshPhongMaterial({color: 0x00ff00})
-            //     );
-            //     obstacle.isBarrier = false;
-            //     obstacle.color = "green";
-            //     obstacle.position.x = lane * this.laneWidth;
-            // }
             if (obstacle) {
                 obstacle.position.z = this.car.mesh.position.z - this.obstacleDistance;
                 obstacle.castShadow = true;
                 obstacle.receiveShadow = true;
 
-                // console.log("new obstacle in: ", obstacle.position.x, obstacle.position.z)
+                // console.log("new obstacle in: ", obstacle.position.x, obstacle.position.z, obstacle.isBarrier);
                 this.obstacles.push(obstacle);
                 this.scene.add(obstacle);
             }
         }
 
+            var timeFromLastOrb = performance.now() - this.lastOrb;
+            // console.log("timeFromLastOrb", timeFromLastOrb);
+            if (timeFromLastOrb > minOrbTimeDifferenceInMS) {
+                let obstacle;
+                let multiplier = 100 + (this.maxVol - this.minVol) / 10;
 
+                this.getAudioData(this.dataArray);
 
-        if (!this.recentOrb) {
-            this.recentOrb = true;
-            setTimeout(() => this.recentOrb = false, minOrbTimeDifferenceInMS)
-            let obstacle;
-            let lane = Math.floor(this.map(this.audioData[0] ,30, 170, 0.1, 1) * 4) - 2;
-            this.getAudioData(this.dataArray);
-            this.audioData[0] *= 150
-            console.log(this.audioData[0]);
+                if (this.audioData[0] > 0) {
+                    this.audioData[0] *= multiplier;
+                }
 
-            if (this.audioData[0] >= 90 ) {
-                this.recentOrb = true;
-                setTimeout(() => this.recentOrb = false, minOrbTimeDifferenceInMS)
+                if (timeFromLastOrb > maxOrbTimeDifferenceInMS && this.maxVol > 300) {
+                    this.maxVol = this.maxVol - 300;
+                }
 
-                obstacle = new THREE.Mesh(
-                    new THREE.SphereGeometry(1.5, 10, 10),
-                    new THREE.MeshPhongMaterial({color: 0x00ff00})
-                );
-                obstacle.isBarrier = false;
-                obstacle.color = "green";
-                obstacle.position.x = lane * this.laneWidth;
+                if (this.audioData[0] > this.maxVol) {
+                    this.maxVol = this.audioData[0];
+                }
+                // let lane = Math.floor(this.map(this.audioData[0], this.maxVol * 0.3, this.maxVol, 0.1, 1) * 4) - 2;
+                let lane = Math.floor(this.map(this.audioData[0], Math.min(this.audioData[0], this.maxVol * 0.3), this.maxVol, 0.1, 1) * 4) - 2;
+                // console.log(this.audioData[0]);
 
-                obstacle.position.z = this.car.mesh.position.z - this.obstacleDistance;
-                obstacle.castShadow = true;
-                obstacle.receiveShadow = true;
-                this.obstacles.push(obstacle);
-                this.scene.add(obstacle);
+                if (this.audioData[0] >= this.maxVol * 0.65) {
+                    // console.log("Vol:", this.audioData[0] / this.maxVol, "%");
+                    // console.log(this.audioData[0], Math.min(this.audioData[0], this.maxVol * 0.3), this.maxVol);
+                    // console.log(lane);
+
+                    this.lastOrb = performance.now();
+                    // this.recentOrb = true;
+                    // setTimeout(() => this.recentOrb = false, minOrbTimeDifferenceInMS)
+
+                    obstacle = new THREE.Mesh(
+                        new THREE.SphereGeometry(1.5, 10, 10),
+                        new THREE.MeshPhongMaterial({color: 0x00ff00})
+                    );
+                    obstacle.isBarrier = false;
+                    obstacle.color = "green";
+                    obstacle.position.x = lane * this.laneWidth;
+
+                    obstacle.position.z = this.car.mesh.position.z - this.obstacleDistance;
+                    obstacle.castShadow = true;
+                    obstacle.receiveShadow = true;
+                    this.obstacles.push(obstacle);
+                    this.scene.add(obstacle);
+                }
             }
-        }
-
-        // create stars
-        if (this.audioData[0] >= 100) {
-            // console.log("Beat");
-        }
 
     }
-
-//
-    // render() {
-    //     this.renderer.render(this.scene, this.camera);
-    // }
 }
 
 export default HomePage;

@@ -274,6 +274,7 @@ class Car {
 
 const HomePage = () => {
     const containerRef = useRef(null);
+    let play = false;
     useEffect(() => {
         const scene = new Scene();
         const car = new Car(0, 0.05,0 );
@@ -286,6 +287,7 @@ const HomePage = () => {
     return (
         <div>
             {/*<h1>REACTion</h1>*/}
+            <button onClick={()=>{play=true}}>Play</button>
             <div className={"world"} ref={containerRef} />
         </div>
     );
@@ -621,11 +623,13 @@ class GameManager {
 
         const handleTouchMove = event => {
             event.preventDefault();
+            event.stopImmediatePropagation();
             handleMoveEvent(event.touches[0])
         };
 
         const handleTouchClick = event => {
             event.preventDefault();
+            event.stopImmediatePropagation();
             if (event.touches.length > 1) {
                 handleMouseClick(event);
             }
@@ -646,8 +650,8 @@ class GameManager {
             window.addEventListener("keydown", handleKeyDown);
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mousedown', handleMouseClick);
-            window.addEventListener('touchstart', handleTouchClick);
-            window.addEventListener('touchmove', handleTouchMove);
+            window.addEventListener('touchstart', handleTouchClick, {passive:false});
+            window.addEventListener('touchmove', handleTouchMove, {passive:false});
         }
 
         this.handleJump();

@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/TruckTune/static/css/main.13fb1130.css",
-    "main.js": "/TruckTune/static/js/main.044b43ba.js",
+    "main.css": "/TruckTune/static/css/main.f8fef915.css",
+    "main.js": "/TruckTune/static/js/main.8f309c9e.js",
     "static/js/787.a284a673.chunk.js": "/TruckTune/static/js/787.a284a673.chunk.js",
     "index.html": "/TruckTune/index.html",
-    "main.13fb1130.css.map": "/TruckTune/static/css/main.13fb1130.css.map",
-    "main.044b43ba.js.map": "/TruckTune/static/js/main.044b43ba.js.map",
+    "main.f8fef915.css.map": "/TruckTune/static/css/main.f8fef915.css.map",
+    "main.8f309c9e.js.map": "/TruckTune/static/js/main.8f309c9e.js.map",
     "787.a284a673.chunk.js.map": "/TruckTune/static/js/787.a284a673.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.13fb1130.css",
-    "static/js/main.044b43ba.js"
+    "static/css/main.f8fef915.css",
+    "static/js/main.8f309c9e.js"
   ]
 }

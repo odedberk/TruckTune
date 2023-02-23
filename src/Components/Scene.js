@@ -415,7 +415,7 @@ class GameManager {
 
 
         // this.stream = "https://cdn.rawgit.com/ellenprobst/web-audio-api-with-Threejs/57582104/lib/TheWarOnDrugs.m4a";
-        this.stream = "TruckTune/nothing.mp3";
+        this.stream = "nothing.mp3";
 
         this.fftSize = 4096;
         // var listener = new THREE.AudioListener();

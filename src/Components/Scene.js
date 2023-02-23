@@ -4,7 +4,7 @@ import { gsap } from "gsap";
 import "./Scene.css"
 
 
-const roadWidth = 35;
+const roadWidth = 40;
 const particlesPool = [];
 const initialCameraPosition = {
     z : 20,
@@ -274,20 +274,21 @@ class Car {
 
 const HomePage = () => {
     const containerRef = useRef(null);
-    let play = false;
+    let manager = useRef(null);
+    // let play = false;
     useEffect(() => {
         const scene = new Scene();
         const car = new Car(0, 0.05,0 );
         scene.add(car.mesh);
         scene.render(containerRef.current);
-        const manager = new GameManager(car, scene);
-        manager.start();
+        manager.current = new GameManager(car, scene);
+        // manager.start();
     }, []);
 
     return (
         <div>
             {/*<h1>REACTion</h1>*/}
-            <button onClick={()=>{play=true}}>Play</button>
+            <button onClick={()=>{manager.current.start()}}>Play</button>
             <div className={"world"} ref={containerRef} />
         </div>
     );
@@ -395,7 +396,7 @@ class GameManager {
         this.obstacles = [];
         this.lane = 0;
         this.turning = false;
-        this.laneWidth = 6.1;
+        this.laneWidth = 8.7;
         this.probability = 0.02;
         this.maxProbability = 0.08;
         this.obstacleDistance = 120;
@@ -413,15 +414,20 @@ class GameManager {
         this.musicDelay = 2300;
 
 
-        this.stream = "https://cdn.rawgit.com/ellenprobst/web-audio-api-with-Threejs/57582104/lib/TheWarOnDrugs.m4a";
-        // this.stream = "coin.mp3";
+        // this.stream = "https://cdn.rawgit.com/ellenprobst/web-audio-api-with-Threejs/57582104/lib/TheWarOnDrugs.m4a";
+        this.stream = "TruckTune/nothing.mp3";
 
-        var fftSize = 4096;
+        this.fftSize = 4096;
         // var listener = new THREE.AudioListener();
         this.audio = new THREE.Audio(new THREE.AudioListener());
-        this.audio.crossOrigin = "anonymous";
+        // this.audio.crossOrigin = "anonymous";
+        this.audio2 = new THREE.Audio(new THREE.AudioListener());
+        this.audioLoader = new THREE.AudioLoader();
+        this.audioLoader2 = new THREE.AudioLoader();
 
-        var audioLoader = new THREE.AudioLoader();
+    }
+
+    startMusic(audioLoader, fftSize) {
         var _this = this;
         audioLoader.load(this.stream, function (buffer) {
             _this.audio.setBuffer(buffer);
@@ -430,11 +436,6 @@ class GameManager {
             _this.audio.play();
             _this.audioStart = performance.now();
         });
-
-        this.audio2 = new THREE.Audio(new THREE.AudioListener());
-
-
-        this.audioLoader2 = new THREE.AudioLoader();
 
         setTimeout(() => {
             _this.audioLoader2.load(_this.stream, function (buffer) {
@@ -455,7 +456,6 @@ class GameManager {
         this.analyser.analyser.minDecibels = -100;
         this.dataArray = this.analyser.data;
         this.getAudioData(this.dataArray);
-
     }
 
     playUserAudio() {
@@ -502,7 +502,7 @@ class GameManager {
     }
 
     start() {
-
+        this.startMusic(this.audioLoader, this.fftSize);
         setInterval(() => {
             this.update();
             // this.render();
@@ -584,7 +584,7 @@ class GameManager {
         };
 
         const handleMoveEvent = event => {
-            const maxMoveX = 13.2;
+            const maxMoveX = 15.2;
             const minMoveX = -maxMoveX;
 
             this.lane = this.map(event.clientX + 30, window.innerWidth * 0.3, window.innerWidth * 0.7, -1.2, 1.2);
@@ -771,7 +771,7 @@ class GameManager {
                 obstacle.isBarrier = true;
                 obstacle.color = "red";
                 obstacle.position.y = 2.5
-                console.log("barrier:", obstacle);
+                // console.log("barrier:", obstacle);
 
             } else if (Math.random() < 0.1) { //Dispatch bonus orb
                 this.recentBarrier = true;
@@ -795,8 +795,11 @@ class GameManager {
                 obstacle.isBonus = true;
                 obstacle.position.x = lane * this.laneWidth;
                 obstacle.position.y = bonusHeight;
+                var startRotationY = obstacle.rotation.y;
                 var tl = gsap.timeline({yoyo: true});
-                tl.to(obstacle.position, {y: bonusHeight + bonusMovement});
+                // tl.to(obstacle.position, {y: bonusHeight + bonusMovement});
+                tl.to(obstacle.rotation, {y: startRotationY + 2*Math.PI, repeat:-1, duration:2, ease:"power1.out"});
+                // tl.to(obstacle.rotation, {y: obstacle.rotation.y - Math.PI/2});
 
                 //
                 // else{

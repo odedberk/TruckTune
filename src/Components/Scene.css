@@ -5,7 +5,7 @@
     overflow: hidden;
     /*background: linear-gradient(#560f54, #ffb100, #320000);*/
     background: radial-gradient(circle, rgb(255, 178, 0) 0%, rgb(29 0 56) 100%);
-    cursor: none;
+    /*cursor: none;*/
     border-color: black;
     border-width: 0.4rem;
     border-style: solid;

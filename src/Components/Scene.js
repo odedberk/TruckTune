@@ -22,6 +22,7 @@ class Scene {
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
         this.renderer.setSize(window.innerWidth*0.95, window.innerHeight*0.95);
+        this.renderer.setPixelRatio( window.devicePixelRatio );
 
         this.renderer.shadowMap.enabled = true;
 
@@ -58,6 +59,8 @@ class Scene {
         // this.scene.add(new THREE.AmbientLight(0x404040));this.
 
         this.createLights();
+
+        window.addEventListener( 'resize', this.onWindowResize, false );
 
 
         // const skyGeometry = new THREE.SphereGeometry(500, 2, 2);
@@ -147,6 +150,7 @@ class Scene {
         this.scene.add(goldLight);
 
         this.scene.add(ambientLight);
+
     }
 
     lightenFog() {
@@ -168,6 +172,14 @@ class Scene {
             this.renderer.render(this.scene, this.camera);
         };
         animate();
+    }
+
+    onWindowResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize( window.innerWidth, window.innerHeight );
+        this.renderer.setPixelRatio( window.devicePixelRatio );
+
     }
 }
 
@@ -314,11 +326,12 @@ Particle.prototype.explode = function(pos, color, scale, radius = 15){
     this.mesh.scale.set(scale, scale, scale);
     var targetX = pos.x + (-1 + Math.random()*2)*radius;
     var targetY = pos.y + (-1 + Math.random()*2)*radius;
-    var targetZ = pos.z + (-1 + Math.random()*2)*radius;
+    // var targetZ = pos.z + (-1 + Math.random()*2)*radius;
     // var speed = .6+Math.random()*.2;
     gsap.to(this.mesh.rotation, {x:Math.random()*12, y:Math.random()*12, z:Math.random()*12});
     gsap.to(this.mesh.scale, {x:.05, y:.05, z:.05});
-    gsap.to(this.mesh.position, {x:targetX, y:targetY, z:targetZ, delay:Math.random() *.1, ease:"power1.out", onComplete:function(){
+    gsap.to(this.mesh.position, {x:targetX, y:targetY, delay:Math.random() *.1, ease:"power1.out", onComplete:function(){
+    // gsap.to(this.mesh.position, {x:targetX, y:targetY, z:targetZ, delay:Math.random() *.1, ease:"power1.out", onComplete:function(){
             if(_p) _p.remove(_this.mesh);
             _this.mesh.scale.set(1,1,1);
             particlesPool.unshift(_this);
@@ -396,7 +409,7 @@ class GameManager {
         this.obstacles = [];
         this.lane = 0;
         this.turning = false;
-        this.laneWidth = 8.7;
+        this.laneWidth = 8.8;
         this.probability = 0.02;
         this.maxProbability = 0.08;
         this.obstacleDistance = 120;
@@ -415,7 +428,7 @@ class GameManager {
 
 
         // this.stream = "https://cdn.rawgit.com/ellenprobst/web-audio-api-with-Threejs/57582104/lib/TheWarOnDrugs.m4a";
-        this.stream = "nothing.mp3";
+        this.stream = "TruckTune/nothing.mp3";
 
         this.fftSize = 4096;
         // var listener = new THREE.AudioListener();
@@ -584,7 +597,7 @@ class GameManager {
         };
 
         const handleMoveEvent = event => {
-            const maxMoveX = 15.2;
+            const maxMoveX = 15.5;
             const minMoveX = -maxMoveX;
 
             this.lane = this.map(event.clientX + 30, window.innerWidth * 0.3, window.innerWidth * 0.7, -1.2, 1.2);
@@ -690,7 +703,7 @@ class GameManager {
                 this.car.chassis.position.y = minJump;
                 this.isJumping = false;
                 // this.scene.particlesHolder.spawnParticles(this.car.mesh.position.clone(), 70, "grey", 0.1, false);
-                this.scene.particlesHolder.generateTiresSmoke(this.car.mesh.position.clone(), 200);
+                this.scene.particlesHolder.generateTiresSmoke(this.car.mesh.position.clone(), 100);
                 // this.scene.particlesHolder.spawnParticles(this.car.mesh.position.clone(), 20, "grey", 0.2, false);
 
                 return;

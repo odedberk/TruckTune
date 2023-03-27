@@ -366,10 +366,12 @@ class ParticlesHolder {
     }
 
     generateTiresSmoke(carPos, density){
-        var rearLeftWheel = {x: carPos.x + 1.5, y: carPos.y - 1, z: carPos.z + 3};
-        var rearRightWheel = {x: carPos.x - 1.5, y: carPos.y - 1, z: carPos.z + 3};
-        this.generateSingleParticlesSource(density, rearLeftWheel, "grey", 0.08, 5);
-        this.generateSingleParticlesSource(density, rearRightWheel,"grey" , 0.08, 5);
+        // var rearLeftWheel = {x: carPos.x + 1.5, y: carPos.y - 1, z: carPos.z + 3};
+        // var rearRightWheel = {x: carPos.x - 1.5, y: carPos.y - 1, z: carPos.z + 3};
+        var center = {x: carPos.x, y: carPos.y - 1, z: carPos.z + 3};
+        // this.generateSingleParticlesSource(density, rearLeftWheel, "grey", 0.08, 5);
+        // this.generateSingleParticlesSource(density, rearRightWheel,"grey" , 0.08, 5);
+        this.generateSingleParticlesSource(density, center,"grey" , 0.08, 5);
 
     }
 
